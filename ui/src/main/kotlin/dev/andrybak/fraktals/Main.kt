@@ -3,10 +3,16 @@ package dev.andrybak.fraktals
 import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
+import java.awt.Point
 import java.awt.Rectangle
+import java.awt.event.MouseAdapter
+import java.awt.event.MouseEvent
+import java.util.*
 import javax.swing.JFrame
 import javax.swing.JPanel
 import javax.swing.SwingUtilities
+import kotlin.math.max
+import kotlin.math.min
 
 class Main {
     companion object {
@@ -31,8 +37,8 @@ data class DoubleRectangle(
 }
 
 fun mandelbrot(c: DoublePoint, max: Int, bounds: DoubleRectangle): Int {
-    var a: Double = c.x
-    var b: Double = c.y
+    var a: Double = 0.0
+    var b: Double = 0.0
     for (i in 0..max) {
         val tmpA = (a * a) - (b * b) + c.x
         val tmpB = 2 * a * b + c.y
@@ -46,8 +52,39 @@ fun mandelbrot(c: DoublePoint, max: Int, bounds: DoubleRectangle): Int {
 
 class MandelbrotPanel(
     private val maxIterations: Int,
-    private val bounds: DoubleRectangle
+    private var bounds: DoubleRectangle
 ) : JPanel() {
+
+    private val boundsStack: Deque<DoubleRectangle> = ArrayDeque()
+    private val escapeBounds = DoubleRectangle(-100.0, 100.0, -100.0, 100.0)
+
+    fun zoom(p1: Point, p2: Point) {
+        val (left, top) = screenToCoords(min(p1.x, p2.x), min(p1.y, p2.y), getBounds(), bounds)
+        val (right, bottom) = screenToCoords(max(p1.x, p2.x), max(p1.y, p2.y), getBounds(), bounds)
+        if (boundsStack.size < 1000)
+            boundsStack.push(bounds)
+        bounds = DoubleRectangle(left, right, bottom, top)
+        println(bounds)
+        repaint()
+    }
+
+    fun zoomOut() {
+        if (boundsStack.isEmpty())
+            return
+        bounds = boundsStack.pop()
+        println(bounds)
+        repaint()
+    }
+
+    fun zoomOutAll() {
+        if (boundsStack.isEmpty())
+            return
+        bounds = boundsStack.peekLast()
+        boundsStack.clear()
+        println(bounds)
+        repaint()
+    }
+
 
     override fun paintComponent(topGraphics: Graphics?) {
         val g: Graphics2D = topGraphics!!.create() as Graphics2D
@@ -55,10 +92,11 @@ class MandelbrotPanel(
         val width: Int = r.width
         val height: Int = r.height
         g.color = Color.BLACK
+        g.fillRect(0, 0, width - 1, height - 1)
         for (x in 0..width) {
             for (y in 0..height) {
                 val c: DoublePoint = screenToCoords(x, y, r, bounds)
-                val i = mandelbrot(c, maxIterations, bounds)
+                val i = mandelbrot(c, maxIterations, escapeBounds)
                 if (i == maxIterations)
                     continue
                 g.color = Color(i % 256, i % 256, i % 256)
@@ -83,10 +121,38 @@ fun main() {
     window.defaultCloseOperation = JFrame.EXIT_ON_CLOSE
 
     val bounds = DoubleRectangle(-2.0, 2.0, -1.5, 1.5)
-    window.contentPane = MandelbrotPanel(
+    val mandelbrotPanel = MandelbrotPanel(
         Main.MAX_ITERATIONS,
         bounds
     )
+    window.contentPane = mandelbrotPanel
+    window.contentPane.addMouseListener(object : MouseAdapter() {
+        var a: Point = Point(0, 0)
+        var b: Point = Point(800, 600)
+
+        override fun mousePressed(e: MouseEvent?) {
+            if (e!!.button != MouseEvent.BUTTON1)
+                return
+            a = e.point
+        }
+
+        override fun mouseReleased(e: MouseEvent?) {
+            if (e!!.button != MouseEvent.BUTTON1)
+                return
+            b = e.point
+            mandelbrotPanel.zoom(a, b)
+        }
+
+        override fun mouseClicked(e: MouseEvent?) {
+            if (e!!.button != MouseEvent.BUTTON3)
+                return
+            if (e.clickCount == 2) {
+                mandelbrotPanel.zoomOutAll()
+            } else {
+                mandelbrotPanel.zoomOut()
+            }
+        }
+    })
 
     window.setSize(Main.WIDTH, Main.HEIGHT)
     window.isVisible = true
