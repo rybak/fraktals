@@ -57,6 +57,28 @@ class MandelbrotPanel(
 
     private val boundsStack: Deque<DoubleRectangle> = ArrayDeque()
     private val escapeBounds = DoubleRectangle(-100.0, 100.0, -100.0, 100.0)
+    private val bufferedRender = BufferedRender(object : Render {
+        override fun paint(g: Graphics2D) {
+            val r: Rectangle = getBounds()
+            val width: Int = r.width
+            val height: Int = r.height
+            println("R.paint: $width x $height")
+            g.color = Color.BLACK
+            g.fillRect(0, 0, width - 1, height - 1)
+            for (x in 0..width) {
+                for (y in 0..height) {
+                    val c: DoublePoint = screenToCoords(x, y, r, bounds)
+                    val i = mandelbrot(c, maxIterations, escapeBounds)
+                    if (i == maxIterations)
+                        continue
+                    g.color = Color(i % 256, i % 256, i % 256)
+//                g.color = Color.getHSBColor(i.toFloat() / maxIterations, 1.0f, i.toFloat() / maxIterations)
+                    g.drawLine(x, y, x, y)
+                }
+            }
+        }
+
+    })
 
     fun zoom(p1: Point, p2: Point) {
         val (left, top) = screenToCoords(min(p1.x, p2.x), min(p1.y, p2.y), getBounds(), bounds)
@@ -65,7 +87,7 @@ class MandelbrotPanel(
             boundsStack.push(bounds)
         bounds = DoubleRectangle(left, right, bottom, top)
         println(bounds)
-        repaint()
+        repaintBufferedRender()
     }
 
     fun zoomOut() {
@@ -73,7 +95,7 @@ class MandelbrotPanel(
             return
         bounds = boundsStack.pop()
         println(bounds)
-        repaint()
+        repaintBufferedRender()
     }
 
     fun zoomOutAll() {
@@ -82,28 +104,17 @@ class MandelbrotPanel(
         bounds = boundsStack.peekLast()
         boundsStack.clear()
         println(bounds)
+        repaintBufferedRender()
+    }
+
+    private fun repaintBufferedRender() {
+        bufferedRender.needRepaint()
         repaint()
     }
 
-
     override fun paintComponent(topGraphics: Graphics?) {
         val g: Graphics2D = topGraphics!!.create() as Graphics2D
-        val r: Rectangle = getBounds()
-        val width: Int = r.width
-        val height: Int = r.height
-        g.color = Color.BLACK
-        g.fillRect(0, 0, width - 1, height - 1)
-        for (x in 0..width) {
-            for (y in 0..height) {
-                val c: DoublePoint = screenToCoords(x, y, r, bounds)
-                val i = mandelbrot(c, maxIterations, escapeBounds)
-                if (i == maxIterations)
-                    continue
-                g.color = Color(i % 256, i % 256, i % 256)
-//                g.color = Color.getHSBColor(i.toFloat() / maxIterations, 1.0f, i.toFloat() / maxIterations)
-                g.drawLine(x, y, x, y)
-            }
-        }
+        bufferedRender.paint(g)
         g.dispose()
     }
 
