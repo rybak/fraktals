@@ -1,12 +1,12 @@
 package dev.andrybak.fraktals
 
-import java.awt.Color
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.Point
 import java.awt.Rectangle
 import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
+import java.awt.image.BufferedImage
 import java.util.*
 import javax.swing.JFrame
 import javax.swing.JPanel
@@ -58,22 +58,24 @@ class MandelbrotPanel(
     private val boundsStack: Deque<DoubleRectangle> = ArrayDeque()
     private val escapeBounds = DoubleRectangle(-100.0, 100.0, -100.0, 100.0)
     private val bufferedRender = BufferedRender(object : Render {
-        override fun paint(g: Graphics2D) {
+        override fun paint(img: BufferedImage) {
             val r: Rectangle = getBounds()
             val width: Int = r.width
             val height: Int = r.height
             println("R.paint: $width x $height")
-            g.color = Color.BLACK
-            g.fillRect(0, 0, width - 1, height - 1)
-            for (x in 0..width) {
-                for (y in 0..height) {
+            for (x in 0 until width) {
+                for (y in 0 until height) {
                     val c: DoublePoint = screenToCoords(x, y, r, bounds)
                     val i = mandelbrot(c, maxIterations, escapeBounds)
                     if (i == maxIterations)
                         continue
-                    g.color = Color(i % 256, i % 256, i % 256)
+                    val colorVal = i % 256
+                    val rgb: Int = ((0xFF) shl 24) or
+                            ((colorVal and 0xFF) shl 16) or
+                            ((colorVal and 0xFF) shl 8) or
+                            ((colorVal and 0xFF) shl 0)
 //                g.color = Color.getHSBColor(i.toFloat() / maxIterations, 1.0f, i.toFloat() / maxIterations)
-                    g.drawLine(x, y, x, y)
+                    img.setRGB(x, y, rgb)
                 }
             }
         }

@@ -1,7 +1,7 @@
 package dev.andrybak.fraktals
 
-import java.awt.Graphics2D
+import java.awt.image.BufferedImage
 
 interface Render {
-    fun paint(g: Graphics2D)
+    fun paint(img: BufferedImage)
 }

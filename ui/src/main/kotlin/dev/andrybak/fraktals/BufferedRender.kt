@@ -25,6 +25,6 @@ class BufferedRender(private val r: Render) {
         val h = g.clipBounds.height
         image = g.deviceConfiguration.createCompatibleImage(w, h, Transparency.OPAQUE)
         println("$w x $h")
-        r.paint(image!!.createGraphics())
+        r.paint(image!!)
     }
 }
