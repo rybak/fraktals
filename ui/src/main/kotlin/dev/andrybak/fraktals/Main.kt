@@ -36,13 +36,17 @@ data class DoubleRectangle(
     fun contains(p: DoublePoint): Boolean = contains(p.x, p.y)
 }
 
-fun mandelbrot(c: DoublePoint, max: Int, bounds: DoubleRectangle): Int {
-    var a: Double = 0.0
-    var b: Double = 0.0
+fun mandelbrot(c: DoublePoint, max: Int): Int {
+    return julia(c, c, max)
+}
+
+fun julia(start: DoublePoint, c: DoublePoint, max: Int): Int {
+    var a: Double = start.x
+    var b: Double = start.y
     for (i in 0..max) {
         val tmpA = (a * a) - (b * b) + c.x
         val tmpB = 2 * a * b + c.y
-        if (!bounds.contains(tmpA, tmpB))
+        if (tmpA * tmpA + tmpB * tmpB >= 4.0)
             return i
         a = tmpA
         b = tmpB
@@ -56,7 +60,6 @@ class MandelbrotPanel(
 ) : JPanel() {
 
     private val boundsStack: Deque<DoubleRectangle> = ArrayDeque()
-    private val escapeBounds = DoubleRectangle(-100.0, 100.0, -100.0, 100.0)
     private val bufferedRender = BufferedRender(object : Render {
         override fun paint(img: BufferedImage) {
             val r: Rectangle = getBounds()
@@ -66,7 +69,7 @@ class MandelbrotPanel(
             for (x in 0 until width) {
                 for (y in 0 until height) {
                     val c: DoublePoint = screenToCoords(x, y, r, bounds)
-                    val i = mandelbrot(c, maxIterations, escapeBounds)
+                    val i = mandelbrot(c, maxIterations)
                     if (i == maxIterations)
                         continue
                     val colorVal = i % 256
