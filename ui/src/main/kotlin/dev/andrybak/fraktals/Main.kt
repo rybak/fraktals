@@ -18,7 +18,7 @@ class Main {
     companion object {
         const val WIDTH: Int = 800
         const val HEIGHT: Int = 600
-        const val MAX_ITERATIONS: Int = 255
+        const val MAX_ITERATIONS: Int = 1024
     }
 }
 
@@ -59,7 +59,10 @@ class MandelbrotPanel(
     private var bounds: DoubleRectangle
 ) : JPanel() {
 
+    private val isMandelbrot: Boolean = false
+
     private val boundsStack: Deque<DoubleRectangle> = ArrayDeque()
+    private var param: DoublePoint = DoublePoint(-0.8, 0.156)
     private val bufferedRender = BufferedRender(object : Render {
         override fun paint(img: BufferedImage) {
             val r: Rectangle = getBounds()
@@ -69,7 +72,11 @@ class MandelbrotPanel(
             for (x in 0 until width) {
                 for (y in 0 until height) {
                     val c: DoublePoint = screenToCoords(x, y, r, bounds)
-                    val i = mandelbrot(c, maxIterations)
+                    val i = if (isMandelbrot) {
+                        mandelbrot(c, maxIterations)
+                    } else {
+                        julia(c, param, maxIterations)
+                    }
                     if (i == maxIterations)
                         continue
                     val colorVal = i % 256
@@ -112,6 +119,12 @@ class MandelbrotPanel(
         repaintBufferedRender()
     }
 
+    fun changeParam(newParam: DoublePoint) {
+        println(newParam)
+        param = newParam
+        repaintBufferedRender()
+    }
+
     private fun repaintBufferedRender() {
         bufferedRender.needRepaint()
         repaint()
@@ -145,6 +158,7 @@ fun main() {
     window.contentPane.addMouseListener(object : MouseAdapter() {
         var a: Point = Point(0, 0)
         var b: Point = Point(800, 600)
+        val paramBounds = DoubleRectangle(-1.0, 1.0, -1.0, 1.0)
 
         override fun mousePressed(e: MouseEvent?) {
             if (e!!.button != MouseEvent.BUTTON1)
@@ -160,12 +174,18 @@ fun main() {
         }
 
         override fun mouseClicked(e: MouseEvent?) {
-            if (e!!.button != MouseEvent.BUTTON3)
-                return
-            if (e.clickCount == 2) {
-                mandelbrotPanel.zoomOutAll()
-            } else {
-                mandelbrotPanel.zoomOut()
+            when (e!!.button) {
+                MouseEvent.BUTTON3 -> {
+                    if (e.clickCount == 2) {
+                        mandelbrotPanel.zoomOutAll()
+                    } else {
+                        mandelbrotPanel.zoomOut()
+                    }
+                }
+                MouseEvent.BUTTON2 -> {
+                    if (e.clickCount == 2)
+                        mandelbrotPanel.changeParam(screenToCoords(e.x, e.y, window.contentPane.bounds, paramBounds))
+                }
             }
         }
     })
